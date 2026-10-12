@@ -1,0 +1,76 @@
+---
+---
+
+<div 
+  id="preloader" 
+  class="fixed inset-0 z-[100] bg-[#020302] font-mono flex flex-col items-center justify-center p-4 transition-opacity duration-500"
+>
+  <div class="w-full max-w-md space-y-4">
+    <!-- Header Terminal -->
+    <div class="flex items-center justify-between border-b border-[#1d4317] pb-2 text-xs text-gray-500">
+      <span class="text-[#52ff00] font-bold">&gt;_ ARMAND_OS v2.6</span>
+      <span id="preload-status" class="animate-pulse text-[#52ff00]">BOOTING...</span>
+    </div>
+
+    <!-- Logs de chargement -->
+    <div class="h-24 overflow-hidden text-[11px] space-y-1 text-gray-400">
+      <p class="text-gray-600">[0.001] Initializing kernel...</p>
+      <p class="text-gray-600">[0.042] Loading modules: Astro, Tailwind, React Native...</p>
+      <p id="log-step-1" class="hidden text-gray-300">[0.120] Connecting database & API REST...</p>
+      <p id="log-step-2" class="hidden text-[#52ff00]">[0.350] System ready. Welcome, guest.</p>
+    </div>
+
+    <!-- Barre de progression -->
+    <div class="w-full bg-[#050605] border border-[#1d4317] p-1">
+      <div 
+        id="preload-bar" 
+        class="h-2 bg-[#52ff00] w-0 transition-all duration-100 ease-out shadow-[0_0_10px_#52ff00]"
+      ></div>
+    </div>
+
+    <!-- Pourcentage -->
+    <div class="flex items-center justify-between text-xs text-gray-400">
+      <span>INITIALIZING</span>
+      <span id="preload-percent" class="text-[#52ff00] font-bold">0%</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const preloader = document.getElementById('preloader');
+    const bar = document.getElementById('preload-bar');
+    const percentText = document.getElementById('preload-percent');
+    const statusText = document.getElementById('preload-status');
+    const log1 = document.getElementById('log-step-1');
+    const log2 = document.getElementById('log-step-2');
+
+    let progress = 0;
+
+    const interval = setInterval(() => {
+      // Accélération progressive
+      progress += Math.floor(Math.random() * 15) + 5;
+
+      if (progress >= 40 && log1) log1.classList.remove('hidden');
+      if (progress >= 80 && log2) log2.classList.remove('hidden');
+
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+
+        if (statusText) statusText.innerText = 'ONLINE';
+
+        // Masquer le preloader avec effet de fondu
+        setTimeout(() => {
+          if (preloader) {
+            preloader.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => preloader.remove(), 500); // Supprime le nœud du DOM
+          }
+        }, 400);
+      }
+
+      if (bar) bar.style.width = `${progress}%`;
+      if (percentText) percentText.innerText = `${progress}%`;
+    }, 70);
+  });
+</script>

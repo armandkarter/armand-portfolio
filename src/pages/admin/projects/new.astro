@@ -1,0 +1,413 @@
+---
+import { v2 as cloudinary } from 'cloudinary';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import pool from '../../../lib/db'; // Import du pool PostgreSQL
+
+// Helper pour récupérer proprement les variables d'environnement dans Astro / Vite / Node
+const getEnv = (key: string): string => {
+  return (
+    import.meta.env[key] ||
+    (typeof process !== 'undefined' && process.env ? process.env[key] : '') ||
+    ''
+  );
+};
+
+// Configuration de Cloudinary
+const CLOUDINARY_CLOUD_NAME = getEnv('CLOUDINARY_CLOUD_NAME');
+const CLOUDINARY_API_KEY = getEnv('CLOUDINARY_API_KEY');
+const CLOUDINARY_API_SECRET = getEnv('CLOUDINARY_API_SECRET');
+
+cloudinary.config({
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET,
+  secure: true
+});
+
+let formError = '';
+
+// Fonction helper pour envoyer un fichier bufferisé à Cloudinary
+async function uploadToCloudinary(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'portfolio/projects',
+        resource_type: 'image',
+        transformation: [
+          { quality: 'auto', fetch_format: 'auto' }
+        ]
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result?.secure_url || '');
+        }
+      }
+    );
+
+    uploadStream.end(buffer);
+  });
+}
+
+// Traitement POST du Formulaire
+if (Astro.request.method === 'POST') {
+  try {
+    // Vérification de sécurité avant l'upload
+    if (!CLOUDINARY_API_KEY || !CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_SECRET) {
+      throw new Error(
+        "Clés Cloudinary manquantes dans le fichier .env (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)"
+      );
+    }
+
+    const formData = await Astro.request.formData();
+    
+    const title = formData.get('title')?.toString().trim();
+    const category = formData.get('category')?.toString();
+    const description = formData.get('description')?.toString().trim();
+    const tagsRaw = formData.get('tags')?.toString().trim();
+    const demoUrl = formData.get('demoUrl')?.toString().trim() || null;
+    const featured = formData.get('featured') === 'on';
+
+    const imageFiles = formData.getAll('images') as File[];
+
+    if (!title || !description || !tagsRaw || imageFiles.length === 0 || !imageFiles[0].name) {
+      formError = "Veuillez remplir tous les champs obligatoires et fournir au moins une capture d'écran.";
+    } else {
+      const tags = tagsRaw.split(',').map(tag => tag.trim()).filter(Boolean);
+
+      // Génération de slug unique (titre + suffixe aléatoire de 4 caractères)
+      const baseSlug = title
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
+      
+      const uniqueSuffix = Math.random().toString(36).substring(2, 6);
+      const slug = `${baseSlug}-${uniqueSuffix}`;
+
+      // 1. Envoi des images sur Cloudinary
+      const uploadedUrlsPromises = imageFiles
+        .filter(file => file.size > 0 && file.type.startsWith('image/'))
+        .map(file => uploadToCloudinary(file));
+
+      const uploadedImageUrls = await Promise.all(uploadedUrlsPromises);
+
+      const coverImage = uploadedImageUrls[0];
+      const galleryImages = uploadedImageUrls.slice(1);
+
+      // 2. Enregistrement en base de données (Neon / PostgreSQL)
+      const insertQuery = `
+        INSERT INTO projects (title, slug, category, description, tags, cover_image, gallery_images, demo_url, featured)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `;
+
+      await pool.query(insertQuery, [
+        title,
+        slug,
+        category,
+        description,
+        tags,          // Converti automatiquement en TEXT[] par pg
+        coverImage,
+        galleryImages, // Converti automatiquement en TEXT[]
+        demoUrl,
+        featured
+      ]);
+
+      return Astro.redirect('/admin/dashboard');
+    }
+  } catch (error: any) {
+    console.error("Erreur lors de la création du projet :", error);
+    formError = error?.message || "Une erreur est survenue lors de la création du projet.";
+  }
+}
+---
+
+<AdminLayout title="Nouveau Projet | Admin Console" activeTab="projects">
+  
+  <!-- Header -->
+  <div slot="header" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-100">Ajouter un Nouveau Projet</h1>
+      <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Publiez une nouvelle réalisation dans votre base Neon.</p>
+    </div>
+    <a 
+      href="/admin/dashboard" 
+      class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-4 py-2 rounded-xl text-sm transition border border-slate-700"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+      Retour au dashboard
+    </a>
+  </div>
+
+  <!-- Alerte d'Erreur -->
+  {formError && (
+    <div class="max-w-4xl mx-auto bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-xs sm:text-sm flex items-center gap-3 mb-6">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span>{formError}</span>
+    </div>
+  )}
+
+  <!-- Formulaire -->
+  <form 
+    id="project-form"
+    method="POST" 
+    enctype="multipart/form-data" 
+    class="bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl space-y-6 shadow-xl max-w-4xl mx-auto"
+  >
+    
+    <!-- Informations Générales -->
+    <div class="space-y-4">
+      <h2 class="text-sm font-semibold text-emerald-400 uppercase tracking-wider border-b border-slate-800 pb-2">Informations Générales</h2>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="sm:col-span-2">
+          <label for="title" class="block text-xs font-medium text-slate-300 mb-1.5">Titre du Projet <span class="text-emerald-400">*</span></label>
+          <input 
+            type="text" 
+            id="title"
+            name="title" 
+            required 
+            placeholder="ex: Application Web SaaS Analytics"
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition"
+          />
+        </div>
+
+        <div>
+          <label for="category" class="block text-xs font-medium text-slate-300 mb-1.5">Catégorie <span class="text-emerald-400">*</span></label>
+          <select 
+            id="category" 
+            name="category" 
+            required
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 transition"
+          >
+            <option value="Fullstack">Fullstack</option>
+            <option value="Frontend">Frontend</option>
+            <option value="Backend">Backend</option>
+            <option value="Mobile">Mobile</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="description" class="block text-xs font-medium text-slate-300 mb-1.5">Description Détaillée <span class="text-emerald-400">*</span></label>
+        <textarea 
+          id="description"
+          name="description" 
+          rows="4" 
+          required 
+          placeholder="Présentez les fonctionnalités, l'architecture et les défis techniques..."
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition"
+        ></textarea>
+      </div>
+
+      <div>
+        <label for="tags" class="block text-xs font-medium text-slate-300 mb-1.5">Technologies Utilisées (séparées par virgules) <span class="text-emerald-400">*</span></label>
+        <input 
+          type="text" 
+          id="tags"
+          name="tags" 
+          required 
+          placeholder="Astro, Tailwind CSS, TypeScript, Cloudinary"
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition"
+        />
+      </div>
+    </div>
+
+    <!-- Captures d'écran -->
+    <div class="space-y-4 pt-4 border-t border-slate-800">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-emerald-400 uppercase tracking-wider">Captures d'écran du Projet</h2>
+          <p class="text-[11px] text-slate-400 mt-0.5">La <strong class="text-emerald-400">première image</strong> sera la couverture principale.</p>
+        </div>
+        <span id="counter" class="text-xs text-slate-400 font-mono bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">0 / 5 images</span>
+      </div>
+
+      <div class="bg-slate-950 border border-dashed border-slate-800 hover:border-slate-700 rounded-2xl p-6 text-center cursor-pointer transition relative" id="drop-zone">
+        <input 
+          type="file" 
+          id="images" 
+          name="images" 
+          accept="image/png, image/jpeg, image/webp" 
+          multiple 
+          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        />
+        <div class="space-y-2 pointer-events-none">
+          <div class="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">Ajoutez une ou plusieurs images (1 à 5 max)</p>
+          <p class="text-[11px] text-slate-500">Formats : PNG, JPG, WebP</p>
+        </div>
+      </div>
+
+      <p id="error-message" class="text-xs text-red-400 hidden"></p>
+      <div id="preview-container" class="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2"></div>
+    </div>
+
+    <!-- Liens et Options -->
+    <div class="space-y-4 pt-4 border-t border-slate-800">
+      <h2 class="text-sm font-semibold text-emerald-400 uppercase tracking-wider">Lien Démo & Options</h2>
+      
+      <div>
+        <label for="demoUrl" class="block text-xs font-medium text-slate-300 mb-1.5">Lien Démo</label>
+        <input 
+          type="url" 
+          id="demoUrl"
+          name="demoUrl" 
+          placeholder="https://mon-projet.com"
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition"
+        />
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <input 
+          type="checkbox" 
+          id="featured" 
+          name="featured" 
+          class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-emerald-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+        />
+        <label for="featured" class="text-xs sm:text-sm text-slate-300 cursor-pointer select-none">Mettre ce projet en vedette sur la page d'accueil</label>
+      </div>
+    </div>
+
+    <!-- Boutons -->
+    <div class="pt-6 border-t border-slate-800 flex items-center justify-end gap-3">
+      <a href="/admin/dashboard" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">Annuler</a>
+      <button 
+        type="submit" 
+        id="submit-btn"
+        class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-6 py-2.5 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-emerald-500/10 active:scale-95 flex items-center gap-2 cursor-pointer"
+      >
+        <span>Enregistrer & Publier</span>
+      </button>
+    </div>
+
+  </form>
+
+</AdminLayout>
+
+<script>
+  const fileInput = document.getElementById('images') as HTMLInputElement;
+  const previewContainer = document.getElementById('preview-container');
+  const errorMessage = document.getElementById('error-message');
+  const counter = document.getElementById('counter');
+  const form = document.getElementById('project-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+  let selectedFiles: File[] = [];
+
+  function updateFileInput() {
+    const dataTransfer = new DataTransfer();
+    selectedFiles.forEach((file) => dataTransfer.items.add(file));
+    if (fileInput) {
+      fileInput.files = dataTransfer.files;
+    }
+    if (counter) {
+      counter.textContent = `${selectedFiles.length} / 5 images`;
+    }
+  }
+
+  function renderPreviews() {
+    if (!previewContainer) return;
+    previewContainer.innerHTML = '';
+
+    selectedFiles.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const isMain = index === 0;
+
+        const div = document.createElement('div');
+        div.className = `relative aspect-video rounded-xl overflow-hidden border ${
+          isMain ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-800'
+        } bg-slate-950 group flex flex-col justify-between p-1.5`;
+
+        div.innerHTML = `
+          <img src="${e.target?.result}" alt="Preview ${index}" class="absolute inset-0 w-full h-full object-cover" />
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/40"></div>
+          
+          <div class="relative z-10 flex items-start justify-between">
+            ${
+              isMain 
+                ? `<span class="bg-emerald-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded shadow">Principale</span>`
+                : `<span class="bg-slate-900/80 text-slate-400 font-mono text-[9px] px-1.5 py-0.5 rounded border border-slate-700">#${index + 1}</span>`
+            }
+            
+            <button 
+              type="button" 
+              data-index="${index}"
+              class="delete-btn bg-red-500/80 hover:bg-red-600 text-white p-1 rounded-md transition backdrop-blur-sm"
+              title="Supprimer cette image"
+            >
+              <svg class="w-3 h-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <p class="relative z-10 text-[9px] font-mono text-slate-300 truncate px-1">${file.name}</p>
+        `;
+
+        previewContainer.appendChild(div);
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  fileInput?.addEventListener('change', () => {
+    if (!errorMessage) return;
+    errorMessage.classList.add('hidden');
+    errorMessage.textContent = '';
+
+    const newFiles = Array.from(fileInput.files || []);
+
+    if (selectedFiles.length + newFiles.length > 5) {
+      errorMessage.textContent = 'Vous ne pouvez pas ajouter plus de 5 images au total.';
+      errorMessage.classList.remove('hidden');
+      return;
+    }
+
+    selectedFiles = [...selectedFiles, ...newFiles];
+    updateFileInput();
+    renderPreviews();
+  });
+
+  previewContainer?.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const deleteBtn = target.closest('.delete-btn') as HTMLButtonElement;
+
+    if (deleteBtn) {
+      const indexToRemove = parseInt(deleteBtn.dataset.index || '0', 10);
+      selectedFiles.splice(indexToRemove, 1);
+      updateFileInput();
+      renderPreviews();
+    }
+  });
+
+  form?.addEventListener('submit', (e) => {
+    if (selectedFiles.length === 0) {
+      e.preventDefault();
+      if (errorMessage) {
+        errorMessage.textContent = "Veuillez importer au moins une capture d'écran.";
+        errorMessage.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Enregistrement...</span>
+      `;
+    }
+  });
+</script>

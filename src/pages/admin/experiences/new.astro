@@ -1,0 +1,230 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import pool from '../../../lib/db';
+
+let errorMessage = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const role = formData.get('role')?.toString().trim();
+    const company = formData.get('company')?.toString().trim();
+    const startDate = formData.get('start_date')?.toString().trim();
+    const endDateRaw = formData.get('end_date')?.toString().trim();
+    const isCurrent = formData.get('is_current') === 'on';
+    const description = formData.get('description')?.toString().trim();
+    const missionsInput = formData.get('missions')?.toString().trim();
+    const skillsInput = formData.get('skills')?.toString().trim();
+
+    const endDate = isCurrent ? null : (endDateRaw || null);
+
+    if (!role || !startDate || !description) {
+      errorMessage = 'Veuillez remplir les champs obligatoires (Rôle, Date de début, Description).';
+    } else {
+      // Transformation des missions (une mission par ligne)
+      const missionsArray = missionsInput
+        ? missionsInput.split('\n').map((m) => m.trim()).filter(Boolean)
+        : [];
+
+      // Transformation des compétences (séparées par des virgules)
+      const skillsArray = skillsInput
+        ? skillsInput.split(',').map((s) => s.trim()).filter(Boolean)
+        : [];
+
+      await pool.query(
+        `INSERT INTO experiences (role, company, start_date, end_date, is_current, description, missions, skills)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [role, company || null, startDate, endDate, isCurrent, description, missionsArray, skillsArray]
+      );
+
+      return Astro.redirect('/admin/experiences');
+    }
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout de l\'expérience :', error);
+    errorMessage = 'Une erreur est survenue lors de l\'enregistrement.';
+  }
+}
+---
+
+<AdminLayout title="Nouvelle Expérience | Admin" activeTab="experiences">
+  <!-- En-tête -->
+  <div slot="header" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+    <div>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Ajouter une Expérience</h1>
+      <p class="text-xs text-slate-400 mt-1">Enregistrez un nouveau poste ou projet dans votre parcours.</p>
+    </div>
+    <a 
+      href="/admin/experiences" 
+      class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-4 py-2.5 rounded-xl text-xs sm:text-sm transition border border-slate-700 w-fit"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+      <span>Retour à la liste</span>
+    </a>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
+    {errorMessage && (
+      <div class="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs sm:text-sm">
+        {errorMessage}
+      </div>
+    )}
+
+    <form method="POST" class="space-y-6">
+      <!-- Intitulé du poste / Rôle -->
+      <div>
+        <label for="role" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono mb-2">
+          Intitulé du poste / Rôle <span class="text-emerald-400">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="role" 
+          name="role" 
+          required 
+          placeholder="ex: Développeur Full Stack Freelance"
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition"
+        />
+      </div>
+
+      <!-- Entreprise / Organisation -->
+      <div>
+        <label for="company" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono mb-2">
+          Entreprise / Client / Cadre
+        </label>
+        <input 
+          type="text" 
+          id="company" 
+          name="company" 
+          placeholder="ex: Indépendant / Remote, Nom du Client..."
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition"
+        />
+      </div>
+
+      <!-- Dates & Poste actuel -->
+      <div class="space-y-4 bg-slate-950/60 p-4 sm:p-5 rounded-xl border border-slate-800/80">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Date de début -->
+          <div>
+            <label for="start_date" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono mb-2">
+              Date de début <span class="text-emerald-400">*</span>
+            </label>
+            <input 
+              type="date" 
+              id="start_date" 
+              name="start_date" 
+              required 
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition [color-scheme:dark]"
+            />
+          </div>
+
+          <!-- Date de fin -->
+          <div>
+            <label for="end_date" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono mb-2">
+              Date de fin
+            </label>
+            <input 
+              type="date" 
+              id="end_date" 
+              name="end_date" 
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition disabled:opacity-40 disabled:cursor-not-allowed [color-scheme:dark]"
+            />
+          </div>
+        </div>
+
+        <!-- Case Poste Actuel -->
+        <div class="pt-2">
+          <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+            <input 
+              type="checkbox" 
+              id="is_current" 
+              name="is_current" 
+              class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0 cursor-pointer"
+            />
+            <span class="text-xs font-medium text-slate-300">J'y suis actuellement (Poste en cours)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Description globale -->
+      <div>
+        <label for="description" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono mb-2">
+          Présentation générale du poste <span class="text-emerald-400">*</span>
+        </label>
+        <textarea 
+          id="description" 
+          name="description" 
+          rows="3" 
+          required 
+          placeholder="Résumé synthétique du rôle et du contexte..."
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition resize-y"
+        ></textarea>
+      </div>
+
+      <!-- Missions clés (Ligne par ligne) -->
+      <div>
+        <label for="missions" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono mb-2">
+          Missions & Tâches spécifiques (une par ligne)
+        </label>
+        <textarea 
+          id="missions" 
+          name="missions" 
+          rows="4" 
+          placeholder="Développement des API RESTful avec Laravel
+Conception des interfaces sous Next.js
+Optimisation des requêtes PostgreSQL"
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition resize-y font-mono text-xs"
+        ></textarea>
+        <p class="text-[11px] text-slate-500 mt-1">Chaque ligne saisie sera affichée sous forme d'élément de liste.</p>
+      </div>
+
+      <!-- Technologies -->
+      <div>
+        <label for="skills" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono mb-2">
+          Technologies utilisées (séparées par des virgules)
+        </label>
+        <input 
+          type="text" 
+          id="skills" 
+          name="skills" 
+          placeholder="ex: Astro, Laravel, React Native, PostgreSQL"
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition font-mono text-xs"
+        />
+      </div>
+
+      <!-- Boutons -->
+      <div class="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+        <a 
+          href="/admin/experiences" 
+          class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+        >
+          Annuler
+        </a>
+        <button 
+          type="submit" 
+          class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-emerald-500/10 cursor-pointer"
+        >
+          Enregistrer l'expérience
+        </button>
+      </div>
+    </form>
+  </div>
+</AdminLayout>
+
+<script>
+  const isCurrentCheckbox = document.getElementById('is_current') as HTMLInputElement | null;
+  const endDateInput = document.getElementById('end_date') as HTMLInputElement | null;
+
+  function toggleEndDate() {
+    if (!isCurrentCheckbox || !endDateInput) return;
+
+    if (isCurrentCheckbox.checked) {
+      endDateInput.value = '';
+      endDateInput.disabled = true;
+      endDateInput.removeAttribute('required');
+    } else {
+      endDateInput.disabled = false;
+    }
+  }
+
+  isCurrentCheckbox?.addEventListener('change', toggleEndDate);
+</script>

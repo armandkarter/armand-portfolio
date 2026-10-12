@@ -1,0 +1,48 @@
+---
+const currentYear = new Date().getFullYear();
+
+const socialLinks = [
+  { name: "GitHub", url: "https://github.com/rmandkarter" },
+  { name: "LinkedIn", url: "https://www.linkedin.com/in/djeha-armand-99928a348?utm_source=share_via&utm_content=profile&utm_medium=member_ios" },
+  { name: "WhatsApp", url: "https://wa.me/22962298969" },
+  { name: "Facebook", url: "https://www.facebook.com/share/1Lo8rSx1H7/?mibextid=wwXIfr" }
+];
+---
+
+<footer class="w-full border-t border-[#1f3a1b] bg-[#020302] py-10 mt-20 font-mono">
+  <div class="w-[94%] max-w-[1450px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs">
+    
+    <!-- Informations Copyright & Nom -->
+    <div class="flex flex-col sm:flex-row items-center gap-3 text-gray-500 text-center sm:text-left">
+      <span class="text-[#52ff00] font-bold">&gt;_ DJEHA Armand Sedjro</span>
+      <span class="hidden sm:inline text-[#1d4317]">|</span>
+      <span>© {currentYear} Tous droits réservés.</span>
+    </div>
+
+    <!-- Liens Réseaux Sociaux -->
+    <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+      {socialLinks.map((link) => (
+        <a 
+          href={link.url} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="text-gray-400 hover:text-[#52ff00] transition-colors flex items-center gap-1"
+        >
+          <span class="text-[#1d4317]">&gt;</span> {link.name}
+        </a>
+      ))}
+    </div>
+
+    <!-- Bouton Retour en haut -->
+    <div>
+      <a 
+        href="#" 
+        class="text-gray-500 hover:text-[#52ff00] border border-[#1d4317] hover:border-[#52ff00] px-3 py-1.5 transition-all inline-flex items-center gap-2"
+      >
+        <span>[ Top ]</span>
+        <span class="text-[#52ff00]">↑</span>
+      </a>
+    </div>
+
+  </div>
+</footer>

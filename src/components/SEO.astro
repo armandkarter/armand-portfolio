@@ -1,0 +1,50 @@
+---
+export interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  canonicalURL?: URL | string;
+  type?: 'website' | 'article';
+}
+
+const siteName = "Armand Portfolio";
+const defaultDescription = "Portfolio de Développeur Fullstack spécialisé en Astro, Node.js et PostgreSQL.";
+const defaultImage = new URL("/og-image.jpg", Astro.site || "https://armanddev.tech").href;
+
+const {
+  title = "Armand | Développeur Fullstack",
+  description = defaultDescription,
+  image = defaultImage,
+  canonicalURL = Astro.url,
+  type = "website",
+} = Astro.props;
+
+const pageTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
+---
+
+<!-- Global Metadata -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<meta name="generator" content={Astro.generator} />
+
+<!-- Primary Meta Tags -->
+<title>{pageTitle}</title>
+<meta name="title" content={pageTitle} />
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalURL} />
+
+<!-- Open Graph / Facebook / LinkedIn / WhatsApp -->
+<meta property="og:type" content={type} />
+<meta property="og:url" content={Astro.url} />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={image} />
+<meta property="og:site_name" content={siteName} />
+
+<!-- Twitter / X -->
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:url" content={Astro.url} />
+<meta property="twitter:title" content={pageTitle} />
+<meta property="twitter:description" content={description} />
+<meta property="twitter:image" content={image} />

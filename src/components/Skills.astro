@@ -1,0 +1,61 @@
+---
+const skillCategories = [
+  {
+    title: "Backend & API",
+    icon: ">_",
+    skills: [
+      { name: "PHP / Laravel", detail: "Expert" },
+      { name: "Node.js / Express.js", detail: "Avancé" },
+      { name: "MySQL / SQL", detail: "Bases de données" },
+      { name: "RESTful API", detail: "Architecture" }
+    ]
+  },
+  {
+    title: "Frontend & Mobile",
+    icon: "</>",
+    skills: [
+      { name: "JavaScript / TypeScript", detail: "ES6+" },
+      { name: "Astro / Next.js", detail: "Frameworks" },
+      { name: "React Native / Electron", detail: "Mobile & Desktop" },
+      { name: "Tailwind CSS / Bootstrap", detail: "Styling" }
+    ]
+  },
+  {
+    title: "Outils & DevOps",
+    icon: "⚙",
+    skills: [
+      { name: "Git / GitHub", detail: "Versioning" },
+      { name: "Postman", detail: "API Testing" },
+      { name: "VS Code / Terminal", detail: "Environnement" },
+      { name: "Linux / Bash", detail: "Système" }
+    ]
+  }
+];
+---
+
+<section id="skills" class="w-[94%] max-w-[1450px] mx-auto py-20 border-t border-[#1f3a1b]">
+  <div class="text-[#52ff00] text-xs font-mono mb-2">&gt; /skills</div>
+  <h2 class="text-3xl sm:text-5xl font-bold mb-12 text-white">
+    Mes <span class="text-[#52ff00]">Compétences</span>
+  </h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    {skillCategories.map((category) => (
+      <div class="bg-[#050605] border border-[#1d4317] p-6 hover:border-[#52ff00]/50 transition-all group">
+        <div class="flex items-center gap-3 mb-6 border-b border-[#1d4317] pb-4">
+          <span class="text-[#52ff00] text-xl font-bold">{category.icon}</span>
+          <h3 class="text-white text-lg font-bold">{category.title}</h3>
+        </div>
+
+        <ul class="space-y-4">
+          {category.skills.map((skill) => (
+            <li class="flex items-center justify-between text-xs">
+              <span class="text-gray-300 font-mono">{skill.name}</span>
+              <span class="text-gray-500 font-mono text-[10px]">{skill.detail}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+</section>

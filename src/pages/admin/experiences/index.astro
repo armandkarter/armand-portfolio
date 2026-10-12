@@ -1,0 +1,146 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import pool from '../../../lib/db';
+
+// Traitement des actions POST (ex: Suppression)
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const action = formData.get('_action');
+    const id = formData.get('id');
+
+    if (action === 'delete' && id) {
+      await pool.query('DELETE FROM experiences WHERE id = $1', [id]);
+    }
+  } catch (error) {
+    console.error('Erreur lors de la suppression de l\'expérience :', error);
+  }
+}
+
+// Récupération de la liste des expériences
+let experiences = [];
+try {
+  const result = await pool.query(
+    'SELECT * FROM experiences ORDER BY is_current DESC, id DESC'
+  );
+  experiences = result.rows;
+} catch (error) {
+  console.error('Erreur chargement expériences :', error);
+}
+
+const parseSkills = (skills: string[] | string): string[] => {
+  if (!skills) return [];
+  if (Array.isArray(skills)) return skills;
+  if (typeof skills === 'string') return skills.split(',').map((s) => s.trim()).filter(Boolean);
+  return [];
+};
+---
+
+<AdminLayout title="Gestion des Expériences | Admin" activeTab="experiences">
+  <!-- En-tête -->
+  <div slot="header" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+    <div>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Parcours Professionnel</h1>
+      <p class="text-xs text-slate-400 mt-1">Gérez vos postes, missions freelance et expériences clés.</p>
+    </div>
+    <a 
+      href="/admin/experiences/new" 
+      class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-emerald-500/10 cursor-pointer w-fit"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      <span>Nouvelle Expérience</span>
+    </a>
+  </div>
+
+  <!-- Table des expériences -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+    {experiences.length === 0 ? (
+      <div class="p-12 text-center text-slate-500 text-sm">
+        Aucune expérience enregistrée pour le moment.
+      </div>
+    ) : (
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr class="border-b border-slate-800 bg-slate-950/50 text-slate-400 uppercase font-mono text-[11px] tracking-wider">
+              <th class="py-4 px-6">Poste / Rôle</th>
+              <th class="py-4 px-6">Entreprise</th>
+              <th class="py-4 px-6">Période</th>
+              <th class="py-4 px-6">Technologies</th>
+              <th class="py-4 px-6 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 text-slate-300 font-sans">
+            {experiences.map((exp: any) => {
+              const skills = parseSkills(exp.skills);
+              return (
+                <tr class="hover:bg-slate-800/30 transition">
+                  <!-- Role & Statut -->
+                  <td class="py-4 px-6">
+                    <div class="font-semibold text-slate-100 flex items-center gap-2">
+                      {exp.role}
+                      {exp.is_current && (
+                        <span class="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-mono">
+                          Actuel
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  <!-- Entreprise -->
+                  <td class="py-4 px-6 text-slate-400 font-mono">
+                    {exp.company || '—'}
+                  </td>
+
+                  <!-- Période -->
+                  <td class="py-4 px-6 font-mono text-emerald-400 text-xs">
+                    {exp.period}
+                  </td>
+
+                  <!-- Compétences / Tags -->
+                  <td class="py-4 px-6">
+                    <div class="flex flex-wrap gap-1 max-w-xs">
+                      {skills.slice(0, 3).map((skill: string) => (
+                        <span class="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded font-mono border border-slate-700">
+                          {skill}
+                        </span>
+                      ))}
+                      {skills.length > 3 && (
+                        <span class="text-[10px] text-slate-500 font-mono">+{skills.length - 3}</span>
+                      )}
+                    </div>
+                  </td>
+
+                  <!-- Actions -->
+                  <td class="py-4 px-6 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                      <a 
+                        href={`/admin/experiences/edit/${exp.id}`}
+                        class="p-2 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 rounded-lg transition"
+                        title="Modifier"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                      </a>
+
+                      <form method="POST" class="inline" onsubmit="return confirm('Confirmer la suppression ?');">
+                        <input type="hidden" name="_action" value="delete" />
+                        <input type="hidden" name="id" value={exp.id} />
+                        <button 
+                          type="submit" 
+                          class="p-2 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg transition cursor-pointer"
+                          title="Supprimer"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+</AdminLayout>

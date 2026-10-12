@@ -1,0 +1,115 @@
+---
+import { Image } from 'astro:assets';
+import armandImg from '../assets/images/armand2.png';
+
+const stack = [
+  "Laravel", 
+  "PHP", 
+  "JavaScript", 
+  "React Native", 
+  "Astro", 
+  "Next.js", 
+  "Electron.js", 
+  "Express.js", 
+  "MySQL", 
+  "REST API"
+];
+---
+<section class="w-[94%] max-w-[1450px] min-h-[720px] mx-auto grid grid-cols-1 lg:grid-cols-[55%_45%] items-center gap-8 py-10">
+  
+  <!-- Content Gauche -->
+  <div class="z-10 text-center lg:text-left">
+    <div class="inline-flex items-center gap-3 px-3 py-2 border border-[#52ff00] text-[#52ff00] text-xs mb-8">
+      <span class="text-lg">&gt;_</span>
+      <span>FULL STACK DEVELOPER</span>
+    </div>
+
+    <p class="text-gray-500 text-base mb-1">Bonjour, je suis</p>
+
+    <h1 class="leading-none mb-8">
+      <span class="block text-[#52ff00] text-5xl sm:text-7xl lg:text-8xl tracking-tighter font-bold">DJEHA</span>
+      <span class="block text-white text-3xl sm:text-5xl lg:text-6xl tracking-tight font-bold">Armand Sedjro</span>
+    </h1>
+
+    <h2 class="text-xl sm:text-2xl lg:text-3xl max-w-[650px] leading-snug mb-5 mx-auto lg:mx-0">
+      Je transforme des idées en <span class="text-[#52ff00]">solutions digitales.</span>
+    </h2>
+
+    <p class="max-w-[650px] text-gray-400 text-sm leading-relaxed mb-8 mx-auto lg:mx-0">
+      Développeur Full Stack passionné par la conception d'applications web modernes, performantes et adaptées aux besoins réels des entreprises.
+    </p>
+
+    <!-- Boutons d'action -->
+    <div class="flex flex-wrap gap-4 justify-center lg:justify-start mb-8">
+      <a href="#projects" class="inline-flex items-center gap-3 px-5 py-3 bg-[#52ff00] text-black border border-[#52ff00] text-xs font-bold hover:bg-transparent hover:text-[#52ff00] transition-all">
+        Voir mes projets <span>→</span>
+      </a>
+      <a href="#contact" class="inline-flex items-center gap-3 px-5 py-3 text-[#52ff00] border border-[#52ff00] text-xs hover:bg-[#52ff00]/10 transition-all">
+        Me contacter <span>&gt;_</span>
+      </a>
+    </div>
+
+    <!-- Technologies Stack -->
+    <div class="flex flex-wrap gap-2 justify-center lg:justify-start mb-6">
+      {stack.map((item) => (
+        <span class="px-2.5 py-1.5 border border-[#263c20] text-[#7fa878] text-[11px]">{item}</span>
+      ))}
+    </div>
+
+    <!-- Statut -->
+    <div class="flex items-center gap-2 justify-center lg:justify-start text-gray-500 text-[11px]">
+      <span class="w-2 h-2 bg-[#52ff00] rounded-full animate-pulse shadow-[0_0_10px_#52ff00]"></span>
+      <span>Available for opportunities</span>
+    </div>
+  </div>
+
+  <!-- Photo Droite avec cadre Terminal -->
+  <div class="relative min-h-[470px] sm:min-h-[570px] flex items-center justify-center">
+    
+    <!-- Tag filigrane latéral -->
+    <span class="absolute -right-6 top-1/2 -translate-y-1/2 text-[#52ff00]/30 text-xs font-mono rotate-90 hidden sm:block pointer-events-none">
+      &lt;developer&gt;
+    </span>
+
+    <div class="w-[82%] sm:w-[390px] p-2.5 bg-[#050605] border border-[#35552d] rotate-2 shadow-2xl relative z-10">
+      <!-- En-tête de la fenêtre -->
+      <div class="h-8 flex items-center justify-between px-2 text-gray-500 text-[9px] border-b border-[#182516]">
+        <div class="flex gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-gray-700"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-gray-700"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-[#52ff00]"></span>
+        </div>
+        <span>armand.jpeg</span>
+      </div>
+
+      <!-- Conteneur d'image (Couleurs réelles d'origine) -->
+      <div class="relative overflow-hidden aspect-[4/5]">
+        <Image 
+          src={armandImg} 
+          alt="DJEHA Armand Sedjro" 
+          class="w-full h-full object-cover" 
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
+      </div>
+
+      <!-- Bas du cadre -->
+      <div class="flex items-center justify-between p-3">
+        <div>
+          <strong class="block text-white text-xs">DJEHA Armand Sedjro</strong>
+          <span class="block mt-1 text-[#52ff00] text-[9px]">Full Stack Developer</span>
+        </div>
+        <div class="text-[#52ff00] text-xl">_</div>
+      </div>
+    </div>
+
+    <!-- Encart de code flottant -->
+    <div class="absolute right-0 bottom-[30px] sm:bottom-[50px] w-[160px] sm:w-[210px] p-3 sm:p-4 bg-black/90 border border-[#1d4317] text-gray-500 text-[8px] sm:text-[10px] leading-relaxed z-20">
+      <span class="text-[#52ff00]">const</span> developer = &#123;<br />
+      &nbsp;&nbsp;name: <b class="text-[#52ff00]">"Armand"</b>,<br />
+      &nbsp;&nbsp;role: <b class="text-[#52ff00]">"Full Stack"</b>,<br />
+      &nbsp;&nbsp;passion: <b class="text-[#52ff00]">"Code"</b><br />
+      &#125;;
+    </div>
+  </div>
+
+</section>

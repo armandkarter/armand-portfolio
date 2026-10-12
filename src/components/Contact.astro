@@ -1,0 +1,201 @@
+---
+import { actions } from 'astro:actions';
+
+const result = Astro.getActionResult(actions.sendContact);
+---
+
+<section id="contact" class="w-[94%] max-w-[1450px] mx-auto py-20 border-t border-[#1f3a1b]">
+  <div class="text-[#52ff00] text-xs font-mono mb-2">&gt; /contact</div>
+  <h2 class="text-3xl sm:text-5xl font-bold mb-12 text-white">
+    Me <span class="text-[#52ff00]">Contacter</span>
+  </h2>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+    <!-- Contact Info -->
+    <div>
+      <p class="text-gray-400 text-sm leading-relaxed mb-8 font-mono">
+        Un projet web ou mobile en tête, une opportunité de collaboration ou simplement une question ? N'hésitez pas à me laisser un message dans le terminal.
+      </p>
+
+      <div class="space-y-4 text-xs font-mono border-l-2 border-[#52ff00] pl-4 bg-[#050605] p-6 border border-[#1d4317]">
+        <p class="text-gray-300">
+          <span class="text-[#52ff00]">Email Principal:</span> 
+          <a href="mailto:me@armanddev.tech" class="hover:underline hover:text-[#52ff00]">me@armanddev.tech</a>
+        </p>
+        <p class="text-gray-300">
+          <span class="text-[#52ff00]">Email Secours:</span> 
+          <a href="mailto:armanddjeha@gmail.com" class="hover:underline hover:text-[#52ff00]">armanddjeha@gmail.com</a>
+        </p>
+        <p class="text-gray-300">
+          <span class="text-[#52ff00]">Téléphone:</span> 
+          <a href="tel:+2290162298969" class="hover:underline hover:text-[#52ff00]">+229 01 62 29 89 69</a>
+        </p>
+        <p class="text-gray-300">
+          <span class="text-[#52ff00]">WhatsApp:</span> 
+          <a href="https://wa.me/229622398969" target="_blank" rel="noopener noreferrer" class="hover:underline hover:text-[#52ff00]">+229 62 23 98 96 9</a>
+        </p>
+        <p class="text-gray-300">
+          <span class="text-[#52ff00]">Localisation:</span> Bénin (Disponible en Remote)
+        </p>
+        <p class="text-gray-300 flex items-center gap-2">
+          <span class="text-[#52ff00]">Status:</span> 
+          <span class="inline-flex items-center gap-1.5 text-[#52ff00]">
+            <span class="w-2 h-2 bg-[#52ff00] rounded-full animate-pulse"></span>
+            Open to work
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Contact Form -->
+    <div class="bg-[#050605] border border-[#1d4317] p-6 font-mono">
+      
+      <!-- Zone de notification de statut -->
+      <div id="status-message" class="hidden mb-6 p-4 text-xs border"></div>
+
+      {result && !result.error && (
+        <div class="mb-6 p-4 text-xs border border-[#52ff00] bg-[#52ff00]/10 text-[#52ff00]">
+          [OK] Message transmis et enregistré avec succès !
+        </div>
+      )}
+
+      {result && result.error && (
+        <div class="mb-6 p-4 text-xs border border-red-500 bg-red-500/10 text-red-400">
+          [ERROR] {result.error.message}
+        </div>
+      )}
+
+      <form id="contact-form" action={actions.sendContact} method="POST" class="space-y-5" novalidate>
+        
+        <!-- Champ Nom -->
+        <div>
+          <label for="name" class="block text-xs text-[#52ff00] mb-2">&gt; nom_complet *</label>
+          <input 
+            type="text" 
+            id="name" 
+            name="name"
+            required 
+            placeholder="Ex: John Doe" 
+            class="w-full bg-black border border-[#1d4317] text-white text-xs p-3 focus:outline-none focus:border-[#52ff00] transition-colors"
+          />
+        </div>
+
+        <!-- Champ Email -->
+        <div>
+          <label for="email" class="block text-xs text-[#52ff00] mb-2">&gt; email *</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email"
+            required 
+            placeholder="votre.email@example.com" 
+            class="w-full bg-black border border-[#1d4317] text-white text-xs p-3 focus:outline-none focus:border-[#52ff00] transition-colors"
+          />
+        </div>
+
+        <!-- Champ Téléphone Format International -->
+        <div>
+          <label for="phone" class="block text-xs text-[#52ff00] mb-2">&gt; telephone_international *</label>
+          <input 
+            type="tel" 
+            id="phone" 
+            name="phone"
+            required 
+            placeholder="+2290162298969" 
+            class="w-full bg-black border border-[#1d4317] text-white text-xs p-3 focus:outline-none focus:border-[#52ff00] transition-colors"
+          />
+          <p class="text-[10px] text-gray-500 mt-1">Format requis : + suivi de l'indicatif pays (ex: +229...)</p>
+        </div>
+
+        <!-- Champ Message -->
+        <div>
+          <label for="message" class="block text-xs text-[#52ff00] mb-2">&gt; message *</label>
+          <textarea 
+            id="message" 
+            name="message"
+            rows="5" 
+            required 
+            placeholder="Saisissez votre message..." 
+            class="w-full bg-black border border-[#1d4317] text-white text-xs p-3 focus:outline-none focus:border-[#52ff00] transition-colors resize-none"
+          ></textarea>
+        </div>
+
+        <!-- Bouton Submit -->
+        <button 
+          type="submit" 
+          id="submit-btn"
+          class="w-full bg-[#52ff00] text-black font-bold text-xs p-3 hover:bg-transparent hover:text-[#52ff00] border border-[#52ff00] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+        >
+          <span id="btn-text">Envoyer_le_message</span>
+          <span>&gt;_</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { actions } from 'astro:actions';
+
+  const form = document.getElementById('contact-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const btnText = document.getElementById('btn-text');
+  const statusMsg = document.getElementById('status-message');
+
+  const phoneRegex = /^\+[1-9]\d{1,14}$/;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!form || !submitBtn || !btnText || !statusMsg) return;
+
+    const formData = new FormData(form);
+    const name = (formData.get('name') as string || '').trim();
+    const email = (formData.get('email') as string || '').trim();
+    const phone = (formData.get('phone') as string || '').replace(/\s+/g, '');
+    const message = (formData.get('message') as string || '').trim();
+
+    statusMsg.classList.add('hidden');
+
+    if (!name || !email || !phone || !message) {
+      showError('[ERROR] Tous les champs marqués d\'une étoile (*) sont obligatoires.');
+      return;
+    }
+
+    if (!phoneRegex.test(phone)) {
+      showError('[ERROR] Le numéro de téléphone doit être au format international (ex: +2290162298969).');
+      return;
+    }
+
+    if (message.length < 10) {
+      showError('[ERROR] Le message doit contenir au moins 10 caractères.');
+      return;
+    }
+
+    formData.set('phone', phone);
+
+    submitBtn.disabled = true;
+    btnText.innerText = 'ENREGISTREMENT_ET_ENVOI...';
+
+    const { data, error } = await actions.sendContact(formData);
+
+    submitBtn.disabled = false;
+    btnText.innerText = 'Envoyer_le_message';
+
+    if (error) {
+      showError(`[ERROR] ${error.message || 'Une erreur de validation est survenue.'}`);
+    } else if (data?.success) {
+      statusMsg.className = 'mb-6 p-4 text-xs border border-[#52ff00] bg-[#52ff00]/10 text-[#52ff00] font-mono';
+      statusMsg.innerText = '[OK] Message transmis, sauvegardé en BDD et envoyé par email avec succès !';
+      statusMsg.classList.remove('hidden');
+      form.reset();
+    }
+  });
+
+  function showError(msg: string) {
+    if (!statusMsg) return;
+    statusMsg.className = 'mb-6 p-4 text-xs border border-red-500 bg-red-500/10 text-red-400 font-mono';
+    statusMsg.innerText = msg;
+    statusMsg.classList.remove('hidden');
+  }
+</script>

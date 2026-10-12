@@ -1,0 +1,269 @@
+---
+import { v2 as cloudinary } from 'cloudinary';
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import pool from '../../../../lib/db';
+
+const getEnv = (key: string): string => {
+  return (
+    import.meta.env[key] ||
+    (typeof process !== 'undefined' && process.env ? process.env[key] : '') ||
+    ''
+  );
+};
+
+const CLOUDINARY_CLOUD_NAME = getEnv('CLOUDINARY_CLOUD_NAME');
+const CLOUDINARY_API_KEY = getEnv('CLOUDINARY_API_KEY');
+const CLOUDINARY_API_SECRET = getEnv('CLOUDINARY_API_SECRET');
+
+cloudinary.config({
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET,
+  secure: true
+});
+
+const { id } = Astro.params;
+let formError = '';
+let project: any = null;
+
+// 1. Récupérer les données actuelles du projet
+try {
+  const result = await pool.query('SELECT * FROM projects WHERE id = $1', [id]);
+  if (result.rows.length === 0) {
+    return Astro.redirect('/admin/dashboard');
+  }
+  project = result.rows[0];
+} catch (error) {
+  console.error('Erreur chargement projet :', error);
+  return Astro.redirect('/admin/dashboard');
+}
+
+// Helper pour l'upload Cloudinary
+async function uploadToCloudinary(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'portfolio/projects',
+        resource_type: 'image',
+        transformation: [{ quality: 'auto', fetch_format: 'auto' }]
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result?.secure_url || '');
+      }
+    );
+    uploadStream.end(buffer);
+  });
+}
+
+// 2. Traitement de la modification (POST)
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+
+    const title = formData.get('title')?.toString().trim();
+    const category = formData.get('category')?.toString();
+    const description = formData.get('description')?.toString().trim();
+    const tagsRaw = formData.get('tags')?.toString().trim();
+    const demoUrl = formData.get('demoUrl')?.toString().trim() || null;
+    const featured = formData.get('featured') === 'on';
+
+    const newImageFiles = formData.getAll('images') as File[];
+
+    if (!title || !description || !tagsRaw) {
+      formError = "Veuillez remplir tous les champs obligatoires.";
+    } else {
+      const tags = tagsRaw.split(',').map(tag => tag.trim()).filter(Boolean);
+
+      let coverImage = project.cover_image;
+      let galleryImages = project.gallery_images || [];
+
+      // Si de nouvelles images sont fournies, on les uploade sur Cloudinary
+      const validNewFiles = newImageFiles.filter(f => f.size > 0 && f.type.startsWith('image/'));
+      
+      if (validNewFiles.length > 0) {
+        const uploadedUrls = await Promise.all(validNewFiles.map(file => uploadToCloudinary(file)));
+        coverImage = uploadedUrls[0];
+        galleryImages = uploadedUrls.slice(1);
+      }
+
+      // Mise à jour SQL
+      const updateQuery = `
+        UPDATE projects 
+        SET title = $1, category = $2, description = $3, tags = $4, 
+            cover_image = $5, gallery_images = $6, demo_url = $7, featured = $8
+        WHERE id = $9
+      `;
+
+      await pool.query(updateQuery, [
+        title,
+        category,
+        description,
+        tags,
+        coverImage,
+        galleryImages,
+        demoUrl,
+        featured,
+        id
+      ]);
+
+      return Astro.redirect('/admin/dashboard');
+    }
+  } catch (error: any) {
+    console.error("Erreur lors de la mise à jour :", error);
+    formError = error?.message || "Une erreur est survenue lors de la mise à jour.";
+  }
+}
+---
+
+<AdminLayout title={`Éditer ${project.title} | Admin`} activeTab="projects">
+  
+  <div slot="header" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-100">Éditer le Projet</h1>
+      <p class="text-xs sm:text-sm text-slate-400 mt-0.5">ID #{project.id} — Modifiez les informations enregistrées dans Neon.</p>
+    </div>
+    <a 
+      href="/admin/dashboard" 
+      class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-4 py-2 rounded-xl text-sm transition border border-slate-700"
+    >
+      Retour au dashboard
+    </a>
+  </div>
+
+  {formError && (
+    <div class="max-w-4xl mx-auto bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-xs sm:text-sm mb-6">
+      {formError}
+    </div>
+  )}
+
+  <form method="POST" enctype="multipart/form-data" class="bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl space-y-6 shadow-xl max-w-4xl mx-auto">
+    
+    <div class="space-y-4">
+      <h2 class="text-sm font-semibold text-emerald-400 uppercase tracking-wider border-b border-slate-800 pb-2">Informations Générales</h2>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="sm:col-span-2">
+          <label for="title" class="block text-xs font-medium text-slate-300 mb-1.5">Titre du Projet</label>
+          <input 
+            type="text" 
+            id="title"
+            name="title" 
+            value={project.title}
+            required 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+          />
+        </div>
+
+        <div>
+          <label for="category" class="block text-xs font-medium text-slate-300 mb-1.5">Catégorie</label>
+          <select 
+            id="category" 
+            name="category" 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+          >
+            <option value="Fullstack" selected={project.category === 'Fullstack'}>Fullstack</option>
+            <option value="Frontend" selected={project.category === 'Frontend'}>Frontend</option>
+            <option value="Backend" selected={project.category === 'Backend'}>Backend</option>
+            <option value="Mobile" selected={project.category === 'Mobile'}>Mobile</option>
+            <option value="Autre" selected={project.category === 'Autre'}>Autre</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="description" class="block text-xs font-medium text-slate-300 mb-1.5">Description Détaillée</label>
+        <textarea 
+          id="description"
+          name="description" 
+          rows="4" 
+          required 
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+        >{project.description}</textarea>
+      </div>
+
+      <div>
+        <label for="tags" class="block text-xs font-medium text-slate-300 mb-1.5">Technologies Utilisées</label>
+        <input 
+          type="text" 
+          id="tags"
+          name="tags" 
+          value={Array.isArray(project.tags) ? project.tags.join(', ') : project.tags}
+          required 
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+        />
+      </div>
+    </div>
+
+    <!-- Images actuelles & Remplacement -->
+    <div class="space-y-4 pt-4 border-t border-slate-800">
+      <h2 class="text-sm font-semibold text-emerald-400 uppercase tracking-wider">Images</h2>
+      
+      {project.cover_image && (
+        <div>
+          <p class="text-xs text-slate-400 mb-2">Image de couverture actuelle :</p>
+          <img src={project.cover_image} alt="Couverture actuelle" class="w-32 h-20 object-cover rounded-xl border border-slate-800" />
+        </div>
+      )}
+
+      <div>
+        <label for="images" class="block text-xs font-medium text-slate-300 mb-1.5">Remplacer les images (facultatif)</label>
+        <input 
+          type="file" 
+          id="images" 
+          name="images" 
+          accept="image/*" 
+          multiple 
+          class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer"
+        />
+        <p class="text-[11px] text-slate-500 mt-1">Laissez vide si vous souhaitez conserver les images actuelles.</p>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="space-y-4 pt-4 border-t border-slate-800">
+      <div>
+        <label for="demoUrl" class="block text-xs font-medium text-slate-300 mb-1.5">Lien Démo</label>
+        <input 
+          type="url" 
+          id="demoUrl"
+          name="demoUrl" 
+          value={project.demo_url || ''}
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+        />
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <input 
+          type="checkbox" 
+          id="featured" 
+          name="featured" 
+          checked={project.featured}
+          class="w-4 h-4 rounded bg-slate-950 border-slate-800 text-emerald-500 focus:ring-0 cursor-pointer"
+        />
+        <label for="featured" class="text-xs sm:text-sm text-slate-300 cursor-pointer">Mettre ce projet en vedette</label>
+      </div>
+    </div>
+
+    <!-- Boutons -->
+    <div class="pt-6 border-t border-slate-800 flex items-center justify-end gap-3">
+      <a 
+        href="/admin/dashboard" 
+        class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-400 hover:text-slate-200 transition"
+      >
+        Annuler
+      </a>
+      <button 
+        type="submit" 
+        class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-6 py-2.5 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-emerald-500/10 cursor-pointer"
+      >
+        Mettre à jour
+      </button>
+    </div>
+
+  </form>
+
+</AdminLayout>

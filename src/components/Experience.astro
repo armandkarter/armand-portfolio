@@ -1,0 +1,158 @@
+---
+import pool from '../lib/db';
+
+interface Experience {
+  id: number;
+  role: string;
+  company?: string;
+  start_date?: string;
+  end_date?: string;
+  is_current?: boolean;
+  description: string;
+  missions?: string[] | string;
+  skills?: string[] | string;
+}
+
+let experiences: Experience[] = [];
+
+try {
+  const result = await pool.query(
+    'SELECT * FROM experiences ORDER BY is_current DESC, start_date DESC, id DESC'
+  );
+  experiences = result.rows;
+} catch (error) {
+  console.error('Erreur lors de la récupération des expériences :', error);
+}
+
+// Fallback si la base de données est vide
+if (experiences.length === 0) {
+  experiences = [
+    {
+      id: 1,
+      role: 'Développeur Full Stack Freelance',
+      company: 'Indépendant / Remote',
+      start_date: '2024-01-01',
+      is_current: true,
+      description: 'Conception et développement de solutions web & mobiles sur-mesure.',
+      missions: [
+        'Conception d\'architectures backend avec Node.js et PostgreSQL',
+        'Développement d\'interfaces web réactives sous Astro et Next.js',
+        'Intégration d\'API RESTful et optimisation des performances'
+      ],
+      skills: ['Astro', 'Laravel', 'React Native', 'Next.js', 'PostgreSQL']
+    },
+    {
+      id: 2,
+      role: 'Développeur Full Stack (Stage Professionnel)',
+      company: 'Entreprise / Client',
+      start_date: '2023-01-01',
+      end_date: '2023-12-31',
+      is_current: false,
+      description: 'Développement d\'applications de gestion et maintenance de bases de données.',
+      missions: [
+        'Maintenance et refonte de bases de données MySQL',
+        'Création de modules spécifiques sous Laravel et Express.js',
+        'Conception d\'outils desktop légers avec Electron.js'
+      ],
+      skills: ['Laravel', 'Express.js', 'MySQL', 'Electron.js', 'TypeScript']
+    }
+  ];
+}
+
+// Helper pour formater la période d'affichage (ex: Janv. 2024 - Présent)
+const formatPeriod = (startDateStr?: string, endDateStr?: string, isCurrent?: boolean): string => {
+  if (!startDateStr) return '';
+  
+  const options: Intl.DateTimeFormatOptions = { month: 'short', year: 'numeric' };
+  const start = new Date(startDateStr).toLocaleDateString('fr-FR', options);
+  
+  if (isCurrent || !endDateStr) {
+    return `${start} - Présent`;
+  }
+  
+  const end = new Date(endDateStr).toLocaleDateString('fr-FR', options);
+  return `${start} - ${end}`;
+};
+
+// Helper pour convertir les tableaux PostgreSQL ou chaînes en tableaux JS
+const parseArrayField = (field?: string[] | string): string[] => {
+  if (!field) return [];
+  if (Array.isArray(field)) return field;
+  if (typeof field === 'string') return field.split(',').map((s) => s.trim()).filter(Boolean);
+  return [];
+};
+---
+
+<section id="experience" class="w-[94%] max-w-[1450px] mx-auto py-20 border-t border-[#1f3a1b]">
+  <div class="text-[#52ff00] text-xs font-mono mb-2">&gt; /experiences-pro</div>
+  <h2 class="text-3xl sm:text-5xl font-bold mb-12 text-white">
+    Parcours <span class="text-[#52ff00]">Professionnel</span>
+  </h2>
+
+  <div class="relative border-l border-[#1d4317] ml-4 sm:ml-8 space-y-12">
+    {experiences.map((exp) => {
+      const periodText = formatPeriod(exp.start_date, exp.end_date, exp.is_current);
+      const missionList = parseArrayField(exp.missions);
+      const skillList = parseArrayField(exp.skills);
+
+      return (
+        <div class="relative pl-8 group">
+          <!-- Puce terminal -->
+          <div class={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 bg-[#020302] border transition-colors ${
+            exp.is_current ? 'border-[#52ff00] bg-[#52ff00]' : 'border-[#1d4317] group-hover:border-[#52ff00]'
+          }`}></div>
+
+          <!-- Période & Statut -->
+          <div class="flex flex-wrap items-center gap-3 mb-2 font-mono">
+            <span class="text-[#52ff00] text-xs capitalize">
+              [ {periodText} ]
+            </span>
+
+            {exp.is_current && (
+              <span class="text-[10px] text-[#52ff00] bg-[#1d4317]/50 border border-[#52ff00]/40 px-2 py-0.5 uppercase tracking-widest flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#52ff00] animate-ping"></span>
+                Poste Actuel
+              </span>
+            )}
+          </div>
+
+          <!-- Titre & Entreprise -->
+          <h3 class="text-white text-xl font-bold mb-2">
+            {exp.role}
+            {exp.company && (
+              <span class="text-gray-400 text-sm font-normal"> @ {exp.company}</span>
+            )}
+          </h3>
+
+          <!-- Description globale -->
+          <p class="text-gray-300 text-xs sm:text-sm leading-relaxed max-w-[850px] font-mono mb-3">
+            {exp.description}
+          </p>
+
+          <!-- Liste des missions clés -->
+          {missionList.length > 0 && (
+            <ul class="space-y-1.5 mb-4 max-w-[850px] font-mono text-xs text-gray-400">
+              {missionList.map((mission) => (
+                <li class="flex items-start gap-2">
+                  <span class="text-[#52ff00] shrink-0">›</span>
+                  <span>{mission}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <!-- Badges de technologies -->
+          {skillList.length > 0 && (
+            <div class="flex flex-wrap gap-2 pt-1">
+              {skillList.map((skill) => (
+                <span class="text-[10px] text-[#7fa878] bg-[#1d4317]/30 border border-[#1d4317] px-2.5 py-1 font-mono hover:border-[#52ff00]/40 transition">
+                  {skill}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </div>
+</section>

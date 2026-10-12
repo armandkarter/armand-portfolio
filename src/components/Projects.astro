@@ -1,0 +1,131 @@
+---
+import pool from '../lib/db';
+
+interface Project {
+  id: number;
+  title: string;
+  slug: string;
+  category: string;
+  description: string;
+  tags: string[] | string;
+  cover_image?: string;
+  demo_url?: string;
+  featured?: boolean;
+}
+
+let projects: Project[] = [];
+
+try {
+  // Sélection des colonnes réelles de la table
+  const result = await pool.query(
+    'SELECT id, title, slug, category, description, tags, cover_image, demo_url, featured FROM projects ORDER BY created_at DESC'
+  );
+  projects = result.rows;
+} catch (error) {
+  console.error('Erreur lors de la récupération des projets :', error);
+}
+
+// Helper pour formater les tags en tableau
+const parseTags = (tags: string[] | string): string[] => {
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === 'string') return tags.split(',').map((t) => t.trim()).filter(Boolean);
+  return [];
+};
+---
+
+<section id="projects" class="w-[94%] max-w-[1450px] mx-auto py-20 border-t border-[#1f3a1b]">
+  <div class="text-[#52ff00] text-xs font-mono mb-2">&gt; /projects</div>
+  <h2 class="text-3xl sm:text-5xl font-bold mb-12 text-white">
+    Projets <span class="text-[#52ff00]">Réalisés</span>
+  </h2>
+
+  {projects.length === 0 ? (
+    <div class="border border-[#1d4317] bg-[#050605] p-8 text-center text-gray-500 font-mono text-sm">
+      [AUCUN PROJET TROUVÉ DANS LA BASE DE DONNÉES]
+    </div>
+  ) : (
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {projects.map((project) => {
+        const techs = parseTags(project.tags);
+
+        return (
+          <article class="bg-[#050605] border border-[#1d4317] p-6 flex flex-col justify-between hover:border-[#52ff00] transition-all group">
+            <div>
+              <!-- En-tête de la carte -->
+              <div class="flex items-center justify-between mb-4">
+                <span class="text-[#52ff00] text-[10px] uppercase tracking-widest border border-[#52ff00]/30 px-2 py-0.5">
+                  {project.category || 'Application'}
+                </span>
+                <div class="flex items-center gap-1.5">
+                  {project.featured && (
+                    <span class="text-[10px] text-amber-400 font-mono font-bold mr-1">★ VEDETTE</span>
+                  )}
+                  <span class="w-1.5 h-1.5 rounded-full bg-gray-700"></span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-gray-700"></span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#52ff00]"></span>
+                </div>
+              </div>
+
+              <!-- Image de couverture -->
+              {project.cover_image && (
+                <div class="mb-4 overflow-hidden border border-[#1d4317] aspect-video bg-black/50">
+                  <img 
+                    src={project.cover_image} 
+                    alt={project.title} 
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90 group-hover:opacity-100"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+
+              <!-- Titre du projet -->
+              <h3 class="text-white text-xl font-bold mb-3 group-hover:text-[#52ff00] transition-colors">
+                {project.title}
+              </h3>
+
+              <!-- Description -->
+              <p class="text-gray-400 text-xs leading-relaxed mb-6 font-mono line-clamp-3">
+                {project.description}
+              </p>
+            </div>
+
+            <div>
+              <!-- Badges de technologies -->
+              <div class="flex flex-wrap gap-2 mb-6">
+                {techs.map((tech) => (
+                  <span class="text-[10px] text-[#7fa878] bg-[#1d4317]/30 border border-[#1d4317] px-2 py-1 font-mono">
+                    {tech}
+                  </span>
+                ))}
+              </div>
+
+              <!-- Liens Démo & Détails -->
+              <div class="flex items-center gap-4 pt-4 border-t border-[#1d4317] text-xs font-mono">
+                {project.demo_url ? (
+                  <a 
+                    href={project.demo_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    class="text-[#52ff00] hover:underline flex items-center gap-1"
+                  >
+                    &gt; Démo
+                  </a>
+                ) : (
+                  <span class="text-gray-600">&gt; Démo N/A</span>
+                )}
+
+                <!-- Lien vers la page de détails -->
+<a 
+  href={`/projects/${project.slug || project.id}`} 
+  class="text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+>
+  &gt; Détails
+</a>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  )}
+</section>

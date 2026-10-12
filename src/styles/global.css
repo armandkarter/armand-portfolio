@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #020302;
+    color: #ffffff;
+    font-family: 'Fira Code', monospace;
+  }
+}
+
+::selection {
+  background-color: #52ff00;
+  color: #020302;
+}
+
+body {
+  font-family: 'Fira Code', monospace;
+}

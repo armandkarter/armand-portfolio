@@ -1,0 +1,103 @@
+---
+const navLinks = [
+  { name: "À propos", href: "#about" },
+  { name: "Compétences", href: "#skills" },
+  { name: "Projets", href: "#projects" },
+  { name: "Expérience", href: "#experience" },
+  { name: "Contact", href: "#contact" }
+];
+---
+
+<header class="sticky top-0 z-50 w-full bg-[#020302]/90 backdrop-blur-md border-b border-[#52ff00]/15">
+  <div class="w-[94%] max-w-[1450px] mx-auto py-4 flex items-center justify-between relative">
+    <!-- Logo -->
+    <a href="#" class="text-white font-bold text-lg flex items-center gap-2">
+      <span class="text-[#52ff00]">&gt;_</span> ARMAND.DEV
+    </a>
+
+    <!-- Navigation Desktop -->
+    <nav class="hidden md:flex gap-8">
+      {navLinks.map((link) => (
+        <a href={link.href} class="text-gray-400 text-xs hover:text-[#52ff00] transition-colors font-mono">
+          {link.name}
+        </a>
+      ))}
+    </nav>
+
+    <!-- Bouton CTA Desktop -->
+    <a href="#contact" class="hidden sm:inline-block text-[#52ff00] border border-[#52ff00] px-4 py-2 text-xs hover:bg-[#52ff00]/10 transition-all font-mono">
+      &gt; Contact
+    </a>
+
+    <!-- Bouton Hamburger (Mobile) -->
+    <button 
+      id="menu-toggle" 
+      aria-label="Ouvrir le menu" 
+      class="md:hidden text-[#52ff00] border border-[#52ff00]/40 p-2 focus:outline-none hover:border-[#52ff00] transition-colors"
+    >
+      <svg id="icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+      <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+
+    <!-- Menu Déroulant Mobile -->
+    <div 
+      id="mobile-menu" 
+      class="hidden absolute top-full left-0 w-full bg-[#050605] border border-[#1d4317] p-6 flex-col gap-4 mt-2 shadow-2xl md:hidden font-mono z-50"
+    >
+      {navLinks.map((link) => (
+        <a 
+          href={link.href} 
+          class="mobile-nav-link text-gray-300 text-sm hover:text-[#52ff00] transition-colors py-2 border-b border-[#1d4317]/50 flex items-center justify-between"
+        >
+          <span>{link.name}</span>
+          <span class="text-[#52ff00]/40 text-xs">&gt;</span>
+        </a>
+      ))}
+      <a 
+        href="#contact" 
+        class="mobile-nav-link text-center text-[#52ff00] border border-[#52ff00] py-3 text-xs mt-2 hover:bg-[#52ff00]/10 transition-all"
+      >
+        &gt; Contact_Me
+      </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const toggleBtn = document.getElementById('menu-toggle');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const iconOpen = document.getElementById('icon-open');
+  const iconClose = document.getElementById('icon-close');
+  const mobileLinks = document.querySelectorAll('.mobile-nav-link');
+
+  function toggleMenu() {
+    if (mobileMenu) {
+      const isHidden = mobileMenu.classList.contains('hidden');
+      if (isHidden) {
+        mobileMenu.classList.remove('hidden');
+        mobileMenu.style.display = 'flex';
+        iconOpen?.classList.add('hidden');
+        iconClose?.classList.remove('hidden');
+      } else {
+        mobileMenu.classList.add('hidden');
+        mobileMenu.style.display = 'none';
+        iconOpen?.classList.remove('hidden');
+        iconClose?.classList.add('hidden');
+      }
+    }
+  }
+
+  toggleBtn?.addEventListener('click', toggleMenu);
+
+  mobileLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+        toggleMenu();
+      }
+    });
+  });
+</script>
